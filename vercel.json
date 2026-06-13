@@ -2,11 +2,14 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "memory": 1024,
-      "excludeFiles": "net.pkl,__pycache__/**,*.pyc,.venv/**,venv/**,tests/**,validated_tokens.txt"
+      "memory": 1024
     }
   },
   "routes": [
+    {
+      "src": "/",
+      "dest": "/api/index.py"
+    },
     {
       "src": "/health",
       "dest": "/api/index.py"
