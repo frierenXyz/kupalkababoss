@@ -1,7 +1,8 @@
+js2py==0.74
+requests==2.31.0
 fastapi==0.104.1
 uvicorn==0.24.0
-requests==2.31.0
-execjs==1.5.1
 fake-useragent==1.4.0
 loguru==0.7.2
 pydantic==2.5.0
+python-multipart==0.0.6
