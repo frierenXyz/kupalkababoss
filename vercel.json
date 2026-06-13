@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "excludeFiles": "{tests/**,__tests__/**,**/*.test.py,**/test_*.py,fixtures/**,__fixtures__/**,testdata/**,sample-data/**,static/**,assets/**,net.pkl}"
+    }
+  },
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ]
+}

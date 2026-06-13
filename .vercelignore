@@ -1,0 +1,11 @@
+net.pkl
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+validated_tokens.txt
+tests/
+docs/
+*.md
+!README.md
