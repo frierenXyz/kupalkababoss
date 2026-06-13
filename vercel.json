@@ -1,36 +1,14 @@
 {
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60,
-      "memory": 1024
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
     }
-  },
+  ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/health",
-      "dest": "/api/index.py"
-    },
-    {
-      "src": "/solve",
-      "dest": "/api/index.py",
-      "methods": ["POST"]
-    },
-    {
-      "src": "/batch",
-      "dest": "/api/index.py",
-      "methods": ["POST"]
-    },
-    {
-      "src": "/stats",
-      "dest": "/api/index.py"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/api/index.py"
+      "dest": "app.py"
     }
   ]
 }
