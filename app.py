@@ -11,7 +11,7 @@ import json, time, random, string, re
 from datetime import datetime
 
 import requests
-import js2py
+from py_mini_racer import MiniRacer
 from fake_useragent import UserAgent
 from loguru import logger
 
@@ -37,94 +37,6 @@ class SolveResponse(BaseModel):
 
 js_context = None
 
-BROWSER_MOCKS = """
-var global = (typeof globalThis !== 'undefined') ? globalThis : {};
-var window = global;
-var document = {
-    createElement: function(tag) {
-        var el = {
-            style: {},
-            appendChild: function() {},
-            removeChild: function() {},
-            getElementsByTagName: function() { return []; },
-            innerHTML: '',
-            textContent: '',
-            innerText: '',
-            offsetWidth: 100,
-            offsetHeight: 20,
-            width: 100,
-            height: 20,
-            getContext: function(type) {
-                if (type === '2d' || type === 'webgl' || type === 'experimental-webgl') {
-                    return {
-                        fillRect: function() {},
-                        fillText: function() {},
-                        fillStyle: '',
-                        font: '',
-                        textBaseline: '',
-                        canvas: {width: 300, height: 150, toDataURL: function() { return ''; }},
-                        getParameter: function() { return ''; },
-                        getExtension: function() { return null; },
-                        getSupportedExtensions: function() { return []; },
-                        getShaderPrecisionFormat: function() { return {rangeMin: 127, rangeMax: 127, precision: 23}; },
-                        getParameter: function() { return ''; },
-                        createBuffer: function() { return {}; },
-                        bindBuffer: function() {},
-                        bufferData: function() {},
-                        createProgram: function() { return {}; },
-                        createShader: function() { return {}; },
-                        shaderSource: function() {},
-                        compileShader: function() {},
-                        attachShader: function() {},
-                        linkProgram: function() {},
-                        useProgram: function() {},
-                        getAttribLocation: function() { return 0; },
-                        getUniformLocation: function() { return {}; },
-                        enableVertexAttribArray: function() {},
-                        vertexAttribPointer: function() {},
-                        uniform2f: function() {},
-                        drawArrays: function() {},
-                        readPixels: function() {},
-                        getSupportedExtensions: function() { return ['ANGLE_instanced_arrays']; },
-                        drawElements: function() {}
-                    };
-                }
-                return null;
-            }
-        };
-        return el;
-    },
-    body: {
-        appendChild: function() {},
-        removeChild: function() {},
-        getElementsByTagName: function() { return []; }
-    },
-    getElementsByTagName: function() { return []; }
-};
-var navigator = {
-    plugins: { length: 0, item: function() { return null; }, namedItem: function() { return null; } },
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    language: 'en-US',
-    platform: 'Win32',
-    cookieEnabled: true,
-    doNotTrack: null,
-    hardwareConcurrency: 4,
-    maxTouchPoints: 0,
-    mimeTypes: { length: 0 }
-};
-var screen = { width: 1920, height: 1080, availWidth: 1920, availHeight: 1040, colorDepth: 24, pixelDepth: 24 };
-var location = { hostname: 'mtacc.mobilelegends.com', href: 'https://mtacc.mobilelegends.com/', protocol: 'https:', port: '', pathname: '/', search: '', hash: '' };
-var sessionStorage = {};
-var localStorage = {};
-var indexedDB = {};
-var XMLHttpRequest = function() {};
-var Image = function() {};
-var ActiveXObject = undefined;
-var openDatabase = undefined;
-var WebSocket = undefined;
-var console = { log: function() {}, error: function() {}, warn: function() {} };
-"""
-
 def load_js_context():
     global js_context
     if js_context is not None:
@@ -149,10 +61,10 @@ def load_js_context():
         return None
 
     try:
-        context = js2py.EvalJs()
-        context.execute(BROWSER_MOCKS + js_code)
-        js_context = context
-        logger.success("JavaScript loaded successfully")
+        ctx = MiniRacer()
+        ctx.eval(js_code)
+        js_context = ctx
+        logger.success("JavaScript loaded successfully with V8")
         return js_context
     except Exception as e:
         logger.error(f"Failed to load JS: {e}")
@@ -163,11 +75,8 @@ def call_js_function(func_name, *args):
     if not context:
         return None
     try:
-        func = getattr(context, func_name, None)
-        if func and callable(func):
-            return func(*args)
-        logger.error(f"Function {func_name} not found")
-        return None
+        result = context.call(func_name, *args)
+        return result
     except Exception as e:
         logger.error(f"Error calling {func_name}: {e}")
         return None
@@ -196,11 +105,9 @@ def generate_mock_clicks():
     pattern = random.choice(patterns)
     clicks = []
     for x, y in pattern:
-        offset_x = random.randint(-5, 5)
-        offset_y = random.randint(-5, 5)
         clicks.append({
-            "x": max(10, min(x + offset_x, 310)),
-            "y": max(10, min(y + offset_y, 190))
+            "x": max(10, min(x + random.randint(-5, 5), 310)),
+            "y": max(10, min(y + random.randint(-5, 5), 190))
         })
     return clicks
 
@@ -236,7 +143,7 @@ async def solve(request: SolveRequest):
         fp = call_js_function('get_fp', request.fp_h, UserAgent().random)
         cb = call_js_function('get_cb')
         if not fp or not cb:
-            return SolveResponse(success=False, error="Failed to generate fingerprint", zone_id=request.zone_id, timestamp=datetime.now().isoformat(), processing_time=time.time() - start_time)
+            return SolveResponse(success=False, error="Failed to generate fingerprint/callback", zone_id=request.zone_id, timestamp=datetime.now().isoformat(), processing_time=time.time() - start_time)
 
         domain = random.choice(DUN163_DOMAINS)
         session = requests.Session()
@@ -338,8 +245,8 @@ async def batch_solve(request: SolveRequest, count: int = 3):
         futures = [executor.submit(get_one) for _ in range(batch_count)]
         results = [f.result() for f in futures]
     tokens = [r.token for r in results if r.success]
-    return {"success": len(tokens) > 0, "tokens": tokens, "count": len(tokens), "total_attempts": batch_count, "errors": [r.error for r in results if not r.success]}
+    return {"success": len(tokens) > 0, "tokens": tokens, "count": len(tokens)}
 
 @app.get("/stats")
 async def get_stats():
-    return {"status": "active", "js_engine": "js2py", "js_loaded": js_context is not None, "supported_zones": ["CN31", "CN30"]}
+    return {"status": "active", "js_engine": "v8 (mini-racer)", "js_loaded": js_context is not None}
