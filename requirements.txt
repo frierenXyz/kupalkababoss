@@ -1,4 +1,4 @@
-js2py==0.74
+mini-racer==0.14.1
 requests==2.31.0
 fastapi==0.104.1
 uvicorn==0.24.0
