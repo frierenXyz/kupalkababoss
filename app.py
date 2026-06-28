@@ -53,21 +53,21 @@ def load_js_context():
         if os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
                 js_code = f.read()
-            logger.info(f"Loaded JS from: {path}")
+            logger.info(f"Loaded JS ({len(js_code)} bytes) from: {path}")
             break
 
     if not js_code:
-        logger.error("Could not find dun163.js")
+        logger.error("dun163.js not found")
         return None
 
     try:
         ctx = MiniRacer()
-        ctx.eval(js_code)
+        ctx.eval("var global = globalThis;\n" + js_code)
         js_context = ctx
         logger.success("JavaScript loaded successfully with V8")
         return js_context
     except Exception as e:
-        logger.error(f"Failed to load JS: {e}")
+        logger.error(f"V8 eval failed: {type(e).__name__}: {e}")
         return None
 
 def call_js_function(func_name, *args):
